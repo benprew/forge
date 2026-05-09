@@ -224,7 +224,7 @@ public final class FModel {
                 // Already exists
                 continue;
             }
-            if (!path.mkdirs()) {
+            if (!path.mkdirs() && !path.isDirectory()) {
                 throw new RuntimeException("cannot create profile directory: " + dname);
             }
         }
