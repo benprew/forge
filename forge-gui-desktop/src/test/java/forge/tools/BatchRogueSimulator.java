@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.Subscribe;
 
+import forge.ai.ComputerUtilAbility;
 import forge.ai.LobbyPlayerAi;
 import forge.deck.CardPool;
 import forge.deck.Deck;
@@ -53,6 +54,7 @@ import forge.game.phase.PhaseHandler;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
+import forge.game.spellability.SpellAbility;
 import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.zone.MagicStack;
 import forge.game.zone.ZoneType;
@@ -581,8 +583,53 @@ public final class BatchRogueSimulator {
             }
             sb.append(']');
 
-            sb.append(",\"playableActions\":[]");
+            sb.append(",\"playableActions\":");
+            appendPlayableActions(sb, s, priority);
             sb.append('}');
+        }
+
+        private static void appendPlayableActions(StringBuilder sb, ReplayState s, Player priority) {
+            sb.append('[');
+            boolean first = true;
+            if (priority != null) {
+                try {
+                    var available = ComputerUtilAbility.getAvailableCards(s.game, priority);
+                    for (SpellAbility sa : ComputerUtilAbility.getSpellAbilities(available, priority)) {
+                        sa.setActivatingPlayer(priority);
+                        if (!sa.canPlay(true)) continue;
+                        if (!first) sb.append(',');
+                        first = false;
+                        appendActionEntry(sb, s, sa);
+                    }
+                } catch (Throwable t) {
+                    // Don't let snapshotting kill the game thread.
+                    System.err.println("[replay] playableActions error: " + t);
+                }
+                if (!first) sb.append(',');
+                sb.append("{\"type\":\"PASS\",\"description\":\"Pass priority\"}");
+            }
+            sb.append(']');
+        }
+
+        private static void appendActionEntry(StringBuilder sb, ReplayState s, SpellAbility sa) {
+            String type = sa.isSpell() ? "SPELL"
+                        : sa.isLandAbility() ? "LAND"
+                        : sa.isActivatedAbility() ? "ACTIVATED"
+                        : "ABILITY";
+            sb.append('{').append("\"type\":\"").append(type).append('"');
+            Card source = sa.getHostCard();
+            if (source != null) {
+                sb.append(",\"sourceId\":\"").append(s.idForCard(source)).append('"');
+                sb.append(",\"sourceName\":\"");
+                Json.escape(sb, source.getName());
+                sb.append('"');
+            }
+            String desc = sa.getStackDescription();
+            if (desc == null || desc.isEmpty()) desc = sa.getDescription();
+            if (desc == null) desc = "";
+            sb.append(",\"description\":\"");
+            Json.escape(sb, desc);
+            sb.append("\"}");
         }
 
         private static void appendIdOrNull(StringBuilder sb, ReplayState s, Player p) {
