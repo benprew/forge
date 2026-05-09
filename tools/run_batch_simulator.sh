@@ -54,7 +54,7 @@ for m in forge-core forge-game forge-ai forge-gui forge-gui-mobile; do
 done
 
 JVM_OPTS=(
-    -Xmx4096m
+    -Xmx${BATCH_SIM_XMX:-2048m}
     -Dfile.encoding=UTF-8
     --add-opens java.base/java.util=ALL-UNNAMED
     --add-opens java.base/java.lang=ALL-UNNAMED
