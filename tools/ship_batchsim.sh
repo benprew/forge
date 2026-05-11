@@ -45,14 +45,17 @@ done
 IFS=',' read -ra HOSTS <<< "$HOSTS_RAW"
 
 if [[ "$DO_BUILD" == 1 ]]; then
-    echo "[ship] mvn test-compile (forge-gui-desktop) ..."
-    mvn -pl forge-gui-desktop -q test-compile \
-        -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true
-
-    echo "[ship] copying runtime dependencies into forge-gui-desktop/target/lib/ ..."
-    mvn -pl forge-gui-desktop -q dependency:copy-dependencies \
+    # -am pulls the parent reactor in so ${revision} resolves and
+    # flatten-maven-plugin produces correct flattened POMs in each module —
+    # otherwise we hit "forge:forge:pom:${revision} not found" failures when
+    # local m2 has stale unflattened forge:* POMs. -U forces re-resolution
+    # past any cached negative lookups.
+    echo "[ship] mvn test-compile + copy-dependencies (forge-gui-desktop + reactor) ..."
+    mvn -pl forge-gui-desktop -am -U -q \
+        test-compile dependency:copy-dependencies \
         -DincludeScope=test \
-        -DoutputDirectory="$ROOT/forge-gui-desktop/target/lib"
+        -DoutputDirectory="$ROOT/forge-gui-desktop/target/lib" \
+        -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true
 fi
 
 REQUIRED=(
@@ -68,10 +71,6 @@ REQUIRED=(
     tools/run_batch_simulator.sh
     tools/run_batch_simulator_prebuilt.sh
 )
-# Optional: included if present, not fatal if missing.
-OPTIONAL=(
-    forge-gui-mobile/target/classes
-)
 for path in "${REQUIRED[@]}"; do
     if [[ ! -e "$path" ]]; then
         echo "[ship] missing required path: $path" >&2
@@ -81,13 +80,6 @@ for path in "${REQUIRED[@]}"; do
 done
 
 PACK=("${REQUIRED[@]}")
-for path in "${OPTIONAL[@]}"; do
-    if [[ -e "$path" ]]; then
-        PACK+=("$path")
-    else
-        echo "[ship] (skipping optional, not present: $path)"
-    fi
-done
 
 echo "[ship] building $TARBALL ..."
 COPYFILE_DISABLE=1 tar czf "$TARBALL" "${PACK[@]}"

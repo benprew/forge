@@ -56,6 +56,7 @@ done
 JVM_OPTS=(
     -Xmx${BATCH_SIM_XMX:-2048m}
     -Dfile.encoding=UTF-8
+    -Djava.awt.headless=true
     --add-opens java.base/java.util=ALL-UNNAMED
     --add-opens java.base/java.lang=ALL-UNNAMED
     --add-opens java.base/java.lang.reflect=ALL-UNNAMED

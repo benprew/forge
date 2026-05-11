@@ -18,7 +18,7 @@ set -euo pipefail
 
 DEFAULT_HOSTS="btp@broome.cluster.recurse.com,btp@crosby.cluster.recurse.com,btp@mercer.cluster.recurse.com,btp@greene.cluster.recurse.com"
 HOSTS_RAW="$DEFAULT_HOSTS"
-PROCS_PER_HOST=6
+PROCS_PER_HOST=4
 COUNT_PER_PROC=10000
 REMOTE_DIR="~/forge"
 SEED_BASE=1
